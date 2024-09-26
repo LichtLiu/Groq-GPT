@@ -1,5 +1,5 @@
 ---
-title: Gradio Chatbot
+title: Groq GPT
 emoji: 💬
 colorFrom: yellow
 colorTo: purple
