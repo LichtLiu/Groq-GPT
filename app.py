@@ -1,63 +1,93 @@
+from groq import Groq
+import json
 import gradio as gr
-from huggingface_hub import InferenceClient
 
-"""
-For more information on `huggingface_hub` Inference API support, please check the docs: https://huggingface.co/docs/huggingface_hub/v0.22.2/en/guides/inference
-"""
-client = InferenceClient("HuggingFaceH4/zephyr-7b-beta")
+# API key
+GROQ_API_KEY = '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'
+client = Groq(api_key=GROQ_API_KEY)
+MODEL = "llama-3.1-70b-versatile"
 
+def calculate(expression):
+    """Evaluate a mathematical expression"""
+    try:
+        result = eval(expression)
+        return json.dumps({"result": result})
+    except:
+        return json.dumps({"error": "Invalid expression"})
 
-def respond(
-    message,
-    history: list[tuple[str, str]],
-    system_message,
-    max_tokens,
-    temperature,
-    top_p,
-):
-    messages = [{"role": "system", "content": system_message}]
+def chatbot(user_prompt):
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "calculate",
+                "description": "Evaluate a mathematical expression",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {
+                            "type": "string",
+                            "description": "The mathematical expression to evaluate",
+                        }
+                    },
+                    "required": ["expression"],
+                },
+            },
+        }
+    ]
+    
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a calculator assistant. Use the calculate function to perform mathematical operations and provide the results."
+        },
+        {
+            "role": "user",
+            "content": user_prompt,
+        }
+    ]
+    
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        tools=tools,
+        tool_choice="auto",
+        max_tokens=4096
+    )
+    
+    response_message = response.choices[0].message
 
-    for val in history:
-        if val[0]:
-            messages.append({"role": "user", "content": val[0]})
-        if val[1]:
-            messages.append({"role": "assistant", "content": val[1]})
+    tool_calls = response_message.tool_calls
+    if tool_calls:
+        available_functions = {
+            "calculate": calculate,
+        }
+        messages.append(response_message)
+        for tool_call in tool_calls:
+            function_name = tool_call.function.name
+            function_to_call = available_functions[function_name]
+            function_args = json.loads(tool_call.function.arguments)
+            function_response = function_to_call(
+                expression=function_args.get("expression")
+            )
+            messages.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": function_response,
+                }
+            )
+        second_response = client.chat.completions.create(
+            model=MODEL,
+            messages=messages
+        )
+        return second_response.choices[0].message.content
+    else:
+        return "No tool call detected."
 
-    messages.append({"role": "user", "content": message})
+# Create Gradio interface
+interface = gr.Interface(fn=chatbot, inputs="text", outputs="text", title="Calculator Chatbot")
 
-    response = ""
-
-    for message in client.chat_completion(
-        messages,
-        max_tokens=max_tokens,
-        stream=True,
-        temperature=temperature,
-        top_p=top_p,
-    ):
-        token = message.choices[0].delta.content
-
-        response += token
-        yield response
-
-"""
-For information on how to customize the ChatInterface, peruse the gradio docs: https://www.gradio.app/docs/chatinterface
-"""
-demo = gr.ChatInterface(
-    respond,
-    additional_inputs=[
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
-        gr.Slider(
-            minimum=0.1,
-            maximum=1.0,
-            value=0.95,
-            step=0.05,
-            label="Top-p (nucleus sampling)",
-        ),
-    ],
-)
-
-
-if __name__ == "__main__":
-    demo.launch()
+# Launch Gradio app
+interface.launch()
