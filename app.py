@@ -86,8 +86,23 @@ def chatbot(user_prompt):
     else:
         return "No tool call detected."
 
-# Create Gradio interface
-interface = gr.Interface(fn=chatbot, inputs="text", outputs="text", title="Calculator Chatbot")
+
+# Create Gradio interface with examples
+examples = [
+    "25 * 4 + 11",
+    "100 / 5 - 7",
+    "(3 + 5) * (10 - 2)",
+    "2 ** 8",
+    "50 % 3"
+]
+
+interface = gr.Interface(
+    fn=chatbot, 
+    inputs="text", 
+    outputs="text", 
+    title="Calculator Chatbot",
+    examples=examples
+)
 
 # Launch Gradio app
 interface.launch()
