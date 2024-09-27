@@ -37,7 +37,7 @@ speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze
 
 def textToSpeech(expression):
     inputs = processor(text=expression, return_tensors = "pt")
-    speech = model.generate_speech(inputs["inputs_ids"], speaker_embeddings, vocoder=vocoder)
+    speech = model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
 
     sf.write("speech.wav", speech.numpy(), samplerate=16000)
 
