@@ -110,5 +110,5 @@ demo = gr.Interface(
 )
 
 # Launch the Gradio app
-demo.launch(debug=True, share=True)
+demo.launch(debug=True)
 
