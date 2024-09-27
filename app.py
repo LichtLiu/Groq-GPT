@@ -101,7 +101,7 @@ def gradio_chatbot(user_prompt, history=[]):
     response, new_history = chatbot(user_prompt, history)
     return response, new_history
 
-interface = gr.Interface(
+demo = gr.Interface(
     fn=gradio_chatbot, 
     inputs=["text", "state"], 
     outputs=["text", "state"], 
@@ -110,4 +110,4 @@ interface = gr.Interface(
 )
 
 # Launch the Gradio app
-interface.launch(share=True)
+demo.launch(debug=True)
