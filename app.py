@@ -3,6 +3,7 @@ import json
 import gradio as gr
 import torch
 from datasets import load_dataset
+import numpy
 
 # For textToSpeech
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
