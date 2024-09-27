@@ -9,6 +9,8 @@ import numpy
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 import soundfile as sf
 
+# if cuda
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # API key
 GROQ_API_KEY = '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'
@@ -29,20 +31,20 @@ def calculate(expression):
 
 # text to speech block
 processor = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
-model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
-vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
+model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts").to(device)
+vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan").to(device)
 
 # load xvector containing speaker's voice characteristics from a dataset
 embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0).to(device)
 
 def textToSpeech(expression):
-    inputs = processor(text=expression, return_tensors = "pt")
+    inputs = processor(text=expression, return_tensors = "pt").to(device)
     speech = model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
 
     # Save the speech output to a file
     file_path = "speech.wav"
-    sf.write(file_path, speech.numpy(), samplerate=16000)
+    sf.write(file_path, speech.cpu().numpy(), samplerate=16000)
     
     return file_path  # Return the file path to be downloaded
 
