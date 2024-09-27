@@ -1,23 +1,24 @@
+
+
 from groq import Groq
 import json
 import gradio as gr
 import torch
 from datasets import load_dataset
-import numpy
 
 # For textToSpeech
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 import soundfile as sf
 
-# if cuda
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+import groq_app as gq
 
 # API key
-GROQ_API_KEY = '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'
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=gq.GROQ_API_KEY)
 MODEL = "llama-3.1-70b-versatile"
 
 
+# if cuda
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def calculate(expression):
