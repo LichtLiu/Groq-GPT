@@ -40,7 +40,11 @@ def textToSpeech(expression):
     inputs = processor(text=expression, return_tensors = "pt")
     speech = model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
 
-    sf.write("speech.wav", speech.numpy(), samplerate=16000)
+    # Save the speech output to a file
+    file_path = "speech.wav"
+    sf.write(file_path, speech.numpy(), samplerate=16000)
+    
+    return file_path  # Return the file path to be downloaded
 
 def chatbot(user_prompt, history=[]):
     tools = [
@@ -151,7 +155,7 @@ def gradio_chatbot(user_prompt, history=[]):
 demo = gr.Interface(
     fn=gradio_chatbot, 
     inputs=["text", "state"], 
-    outputs=["text", "state"], 
+    outputs=["text", "file", "state"], 
     title="Groq Chatbot",
     examples=examples
 )
