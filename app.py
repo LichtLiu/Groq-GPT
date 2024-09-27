@@ -150,7 +150,16 @@ examples = [
 
 def gradio_chatbot(user_prompt, history=[]):
     response, new_history = chatbot(user_prompt, history)
-    return response, new_history
+    
+    # Check if the response includes a tool call for text-to-speech
+    file_path = None
+    for message in new_history:
+        if isinstance(message, dict) and message.get('role') == 'tool' and message.get('name') == 'text-to-speech':
+            file_path = message['content']  # This should be the path to the generated speech file
+    
+    # Ensure all expected outputs are returned
+    return response, file_path, new_history
+
 
 demo = gr.Interface(
     fn=gradio_chatbot, 
