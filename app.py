@@ -1,11 +1,20 @@
 from groq import Groq
 import json
 import gradio as gr
+import torch
+from datasets import load_dataset
+
+# For textToSpeech
+from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+import soundfile as sf
+
 
 # API key
 GROQ_API_KEY = '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'
 client = Groq(api_key=GROQ_API_KEY)
 MODEL = "llama-3.1-70b-versatile"
+
+
 
 
 def calculate(expression):
@@ -15,6 +24,22 @@ def calculate(expression):
         return json.dumps({"result": result})
     except:
         return json.dumps({"error": "Invalid expression"})
+    
+
+# text to speech block
+processor = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
+model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
+vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
+
+# load xvector containing speaker's voice characteristics from a dataset
+embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(6)
+
+def textToSpeech(expression):
+    inputs = processor(text=expression, return_tensors = "pt")
+    speech = model.generate_speech(inputs["inputs_ids"], speaker_embeddings, vocoder=vocoder)
+
+    sf.write("speech.wav", speech.numpy(), samplerate=16000)
 
 def chatbot(user_prompt, history=[]):
     tools = [
@@ -35,12 +60,31 @@ def chatbot(user_prompt, history=[]):
                 },
             },
         }
+        ,
+        {
+            "type": "function",
+            "function": {
+                "name": "text-to-speech",
+                "description": "text to speech",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {
+                            "type": "string",
+                            "description": "text to speech",
+                        }
+                    },
+                    "required": ["expression"],
+                },
+            },
+        }
+        
     ]
     
     messages = history + [
     {
         "role": "system",
-        "content": "You are a assistant. You can Use the calculate function to perform mathematical operations and provide the results or Answer question that is not mathematical question."
+        "content": "You are a assistant. You can Use the calculate function to perform mathematical operations and provide the results and Answer question that is not mathematical question and text to audio."
     },
     {
         "role": "user",
@@ -62,6 +106,7 @@ def chatbot(user_prompt, history=[]):
     if tool_calls:
         available_functions = {
             "calculate": calculate,
+            "text-to-speech": textToSpeech,
         }
         messages.append(response_message)
         for tool_call in tool_calls:
@@ -94,7 +139,8 @@ examples = [
     "100 / 5 - 7",
     "(3 + 5) * (10 - 2)",
     "2 ** 8",
-    "50 % 3"
+    "50 % 3",
+    "generate this text to audio: I like to sing, and calculate 25 * 4 + 11"
 ]
 
 def gradio_chatbot(user_prompt, history=[]):
