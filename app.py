@@ -7,6 +7,7 @@ GROQ_API_KEY = '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'
 client = Groq(api_key=GROQ_API_KEY)
 MODEL = "llama-3.1-70b-versatile"
 
+
 def calculate(expression):
     """Evaluate a mathematical expression"""
     try:
@@ -15,7 +16,7 @@ def calculate(expression):
     except:
         return json.dumps({"error": "Invalid expression"})
 
-def chatbot(user_prompt):
+def chatbot(user_prompt, history=[]):
     tools = [
         {
             "type": "function",
@@ -36,23 +37,23 @@ def chatbot(user_prompt):
         }
     ]
     
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a calculator assistant. Use the calculate function to perform mathematical operations and provide the results."
-        },
-        {
-            "role": "user",
-            "content": user_prompt,
-        }
-    ]
+    messages = history + [
+    {
+        "role": "system",
+        "content": "You are a assistant. You can Use the calculate function to perform mathematical operations and provide the results or Answer question that is not mathematical question."
+    },
+    {
+        "role": "user",
+        "content": user_prompt,
+    }
+    ] # Start with the system message and append the history
+
     
     response = client.chat.completions.create(
         model=MODEL,
         messages=messages,
         tools=tools,
         tool_choice="auto",
-        max_tokens=4096
     )
     
     response_message = response.choices[0].message
@@ -82,9 +83,9 @@ def chatbot(user_prompt):
             model=MODEL,
             messages=messages
         )
-        return second_response.choices[0].message.content
+        return second_response.choices[0].message.content, messages[1:]  # Return updated history
     else:
-        return "No tool call detected."
+        return response.choices[0].message.content, messages[1:]
 
 
 # Create Gradio interface with examples
@@ -96,13 +97,17 @@ examples = [
     "50 % 3"
 ]
 
+def gradio_chatbot(user_prompt, history=[]):
+    response, new_history = chatbot(user_prompt, history)
+    return response, new_history
+
 interface = gr.Interface(
-    fn=chatbot, 
-    inputs="text", 
-    outputs="text", 
-    title="Calculator Chatbot",
+    fn=gradio_chatbot, 
+    inputs=["text", "state"], 
+    outputs=["text", "state"], 
+    title="Groq Chatbot",
     examples=examples
 )
 
-# Launch Gradio app
+# Launch the Gradio app
 interface.launch()
