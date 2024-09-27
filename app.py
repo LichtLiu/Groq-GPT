@@ -110,4 +110,4 @@ interface = gr.Interface(
 )
 
 # Launch the Gradio app
-interface.launch(share=True)
+interface.launch()
